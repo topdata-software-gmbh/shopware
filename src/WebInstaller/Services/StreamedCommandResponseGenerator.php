@@ -16,30 +16,31 @@ class StreamedCommandResponseGenerator
     private const DEFAULT_TIMEOUT = 900;
 
     /**
+     * TODO: TRY THIS CODE: $timeout = Platform::getEnv('...');
      * @param array<string> $params
      * @param callable(Process): void $finish
      */
-    public function run(array $params, callable $finish): StreamedResponse
+    public function run(array $command, callable $callback = null): StreamedResponse
     {
-        $process = new Process($params);
-        $process->setEnv(['COMPOSER_HOME' => sys_get_temp_dir() . '/composer']);
+        $timeout = $_ENV['SHOPWARE_INSTALLER_TIMEOUT'] ?? 900;
+        if (!is_numeric($timeout)) {
+            $timeout = 900;
+        }
 
-        // Read timeout from environment variable or use default value
-        $timeout = (int) ($_ENV['SHOPWARE_INSTALLER_TIMEOUT'] ?? self::DEFAULT_TIMEOUT);
-        $process->setTimeout($timeout);
+        $process = new Process($command);
+        $process->setTimeout((int) $timeout);
 
-        $process->start();
+        if ($callback) {
+            $callback($process);
+        }
 
-        return new StreamedResponse(function () use ($process, $finish): void {
-            foreach ($process->getIterator() as $item) {
-                \assert(\is_string($item));
-                echo $item;
-                flush();
-            }
+        $process->run();
 
-            $finish($process);
+        return new StreamedResponse(function () use ($process) {
+            echo $process->getOutput();
         });
     }
+
 
     /**
      * @param array<string> $params

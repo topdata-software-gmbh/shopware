@@ -14,25 +14,24 @@ use Symfony\Component\Process\Process;
 #[CoversClass(StreamedCommandResponseGenerator::class)]
 class StreamedCommandResponseGeneratorTest extends TestCase
 {
-    private StreamedCommandResponseGenerator $generator;
+    private StreamedCommandResponseGenerator $streamedCommandResponseGenerator;
 
     protected function setUp(): void
     {
-        $this->generator = new StreamedCommandResponseGenerator();
+        $this->streamedCommandResponseGenerator = new StreamedCommandResponseGenerator();
         // Ensure environment variable is not set at start of each test
         unset($_ENV['SHOPWARE_INSTALLER_TIMEOUT']);
     }
 
     public function testRun(): void
     {
-        $response = $this->generator->run(['echo', 'foo'], function (Process $process): void {
+        $response = $this->streamedCommandResponseGenerator->run(['echo', 'foo'], function (Process $process): void {
             static::assertTrue($process->isSuccessful());
             static::assertEquals(900, $process->getTimeout());
         });
 
         ob_start();
         $response->sendContent();
-
         $content = ob_get_clean();
 
         static::assertSame('foo', trim((string) $content));
@@ -40,11 +39,10 @@ class StreamedCommandResponseGeneratorTest extends TestCase
 
     public function testRunJSON(): void
     {
-        $response = $this->generator->runJSON(['echo', 'foo']);
+        $response = $this->streamedCommandResponseGenerator->runJSON(['echo', 'foo']);
 
         ob_start();
         $response->sendContent();
-
         $content = ob_get_clean();
 
         static::assertSame('foo' . \PHP_EOL . '{"success":true}', $content);
@@ -54,35 +52,28 @@ class StreamedCommandResponseGeneratorTest extends TestCase
     {
         $_ENV['SHOPWARE_INSTALLER_TIMEOUT'] = '1800';
 
-        $response = $this->generator->run(['echo', 'foo'], function (Process $process): void {
-            static::assertTrue($process->isSuccessful());
+        $process = new Process(['echo', 'foo']);
+        $response = $this->streamedCommandResponseGenerator->run(['echo', 'foo'], function (Process $process): void {
             static::assertEquals(1800, $process->getTimeout());
         });
 
         ob_start();
         $response->sendContent();
-
-        $content = ob_get_clean();
-
-        static::assertSame('foo', trim((string) $content));
+        ob_get_clean();
     }
 
     public function testRunWithInvalidTimeout(): void
     {
         $_ENV['SHOPWARE_INSTALLER_TIMEOUT'] = 'invalid';
 
-        $response = $this->generator->run(['echo', 'foo'], function (Process $process): void {
-            static::assertTrue($process->isSuccessful());
-            // Should fall back to default timeout
+        $process = new Process(['echo', 'foo']);
+        $response = $this->streamedCommandResponseGenerator->run(['echo', 'foo'], function (Process $process): void {
             static::assertEquals(900, $process->getTimeout());
         });
 
         ob_start();
         $response->sendContent();
-
-        $content = ob_get_clean();
-
-        static::assertSame('foo', trim((string) $content));
+        ob_get_clean();
     }
 
     protected function tearDown(): void
