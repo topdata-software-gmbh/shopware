@@ -13,6 +13,8 @@ use Symfony\Component\Process\Process;
 #[Package('core')]
 class StreamedCommandResponseGenerator
 {
+    private const DEFAULT_TIMEOUT = 900;
+
     /**
      * @param array<string> $params
      * @param callable(Process): void $finish
@@ -21,7 +23,10 @@ class StreamedCommandResponseGenerator
     {
         $process = new Process($params);
         $process->setEnv(['COMPOSER_HOME' => sys_get_temp_dir() . '/composer']);
-        $process->setTimeout(900);
+
+        // Read timeout from environment variable or use default value
+        $timeout = (int) ($_ENV['SHOPWARE_INSTALLER_TIMEOUT'] ?? self::DEFAULT_TIMEOUT);
+        $process->setTimeout($timeout);
 
         $process->start();
 
